@@ -1,0 +1,142 @@
+body {
+  font-family: Arial, "PingFang SC", "Microsoft YaHei", sans-serif;
+  margin: 0;
+  padding: 0;
+  background: #f5f6f7;
+  color: #222;
+}
+
+.popup-body {
+  width: 360px;
+}
+
+.options-body {
+  max-width: 640px;
+  margin: 0 auto;
+}
+
+.panel {
+  padding: 16px;
+  position: relative;
+}
+
+h1 {
+  font-size: 18px;
+  margin: 0;
+}
+
+.header-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin: 0 0 12px;
+}
+
+#settingsIconBtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  padding: 4px;
+  border-radius: 8px;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  color: #666;
+  transition: background 0.15s, color 0.15s;
+}
+
+#settingsIconBtn:hover {
+  background: #e8e8e8;
+  color: #1f6feb;
+}
+
+label {
+  display: block;
+  font-size: 13px;
+  margin: 12px 0 6px;
+}
+
+textarea,
+input,
+select {
+  width: 100%;
+  box-sizing: border-box;
+  border: 1px solid #ccc;
+  border-radius: 8px;
+  padding: 10px;
+  font-size: 14px;
+  background: white;
+}
+
+textarea {
+  min-height: 120px;
+  resize: vertical;
+}
+
+.row {
+  display: flex;
+  gap: 8px;
+  margin-top: 12px;
+  align-items: center;
+}
+
+button {
+  border: none;
+  border-radius: 8px;
+  padding: 10px 14px;
+  background: #1f6feb;
+  color: white;
+  cursor: pointer;
+  font-size: 14px;
+}
+
+button:hover {
+  background: #0d47a1;
+}
+
+button:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+.meta {
+  margin-top: 8px;
+  font-size: 12px;
+  color: #666;
+}
+
+#status {
+  font-size: 13px;
+  color: #0a7a0a;
+}
+
+.options-panel {
+  padding-top: 24px;
+}
+
+#translation-toggle-btn {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  z-index: 999999;
+  padding: 10px 16px;
+  background: #1f6feb;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 14px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+  transition: all 0.2s ease;
+}
+
+#translation-toggle-btn:hover {
+  background: #0d47a1;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+}
+
+#translation-toggle-btn:active {
+  transform: scale(0.98);
+}

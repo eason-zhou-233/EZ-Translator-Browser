@@ -1,0 +1,149 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>设置</title>
+    <link rel="stylesheet" href="options.css" />
+  </head>
+  <body class="options-body">
+    <div class="container">
+      <div class="card">
+        <h1>翻译设置</h1>
+        <p class="desc">选择底层翻译引擎并配置对应参数。</p>
+
+        <div class="field-group">
+          <label for="translationProvider">翻译引擎</label>
+          <select id="translationProvider">
+            <option value="native">传统翻译服务API</option>
+            <option value="llm">大模型 API</option>
+          </select>
+        </div>
+
+        <div id="nativeSettingsGroup">
+          <div class="field-group">
+            <label for="translationService">翻译服务</label>
+            <select id="translationService">
+              <option value="google">Google Translate</option>
+            </select>
+          </div>
+
+          <div class="field-group">
+            <label for="googleTranslateBaseUrl">请求地址</label>
+            <input
+              id="googleTranslateBaseUrl"
+              type="text"
+              placeholder="https://translate.googleapis.com"
+            />
+          </div>
+        </div>
+
+        <div id="llmSettingsGroup">
+          <div class="field-group">
+            <label for="apiBaseUrl">API Base URL *</label>
+            <input id="apiBaseUrl" type="text" placeholder="http://localhost:1234" />
+          </div>
+
+          <div class="field-group">
+            <label for="chatPath">Chat Completions Path *</label>
+            <input id="chatPath" type="text" placeholder="/v1/chat/completions" />
+          </div>
+
+          <div class="field-group">
+            <label for="modelName">Model Name *</label>
+            <input id="modelName" type="text" placeholder="hy-mt2-1.8b" />
+          </div>
+
+          <div class="field-group">
+            <label for="defaultTargetLanguage">Default Target Language</label>
+            <select id="defaultTargetLanguage">
+              <option value="Chinese">中文</option>
+              <option value="English">English</option>
+              <option value="French">Français</option>
+              <option value="German">Deutsch</option>
+              <option value="Japanese">日本語</option>
+              <option value="Korean">한국어</option>
+              <option value="Russian">Русский</option>
+            </select>
+          </div>
+
+          <div class="field-group">
+            <label for="apiKey">API Key</label>
+            <input id="apiKey" type="text" placeholder="sk-xxxx" />
+          </div>
+
+          <div class="grid-2">
+            <div class="field-group">
+              <label for="apiKeyHeader">Authorization Header Name</label>
+              <input id="apiKeyHeader" type="text" placeholder="Authorization" />
+            </div>
+
+            <div class="field-group">
+              <label for="apiKeyPrefix">Authorization Prefix</label>
+              <input id="apiKeyPrefix" type="text" placeholder="Bearer" />
+            </div>
+          </div>
+
+          <div class="grid-4">
+            <div class="field-group compact">
+              <label class="mini-label" for="temperature">Temperature</label>
+              <input
+                id="temperature"
+                type="number"
+                step="0.01"
+                min="0"
+                max="1"
+                placeholder="0.7"
+              />
+            </div>
+
+            <div class="field-group compact">
+              <label class="mini-label" for="topK">Top K</label>
+              <input id="topK" type="number" min="0" placeholder="20" />
+            </div>
+
+            <div class="field-group compact">
+              <label class="mini-label" for="topP">Top P</label>
+              <input
+                id="topP"
+                type="number"
+                step="0.01"
+                min="0"
+                max="1"
+                placeholder="0.6"
+              />
+            </div>
+
+            <div class="field-group compact">
+              <label class="mini-label" for="maxTokens">Max Tokens</label>
+              <input id="maxTokens" type="number" min="1" placeholder="4096" />
+            </div>
+          </div>
+
+          <div class="field-group">
+            <label for="timeoutMs">Request Timeout (ms)</label>
+            <input id="timeoutMs" type="number" min="1000" placeholder="120000" />
+          </div>
+
+          <div class="field-group">
+            <label for="extraHeaders">Additional Headers (JSON)</label>
+            <textarea
+              id="extraHeaders"
+              rows="5"
+              placeholder='{\n  "X-Custom-Header": "demo"\n}'
+            ></textarea>
+          </div>
+        </div>
+
+        <div class="actions">
+          <button id="saveBtn">Save Settings</button>
+          <button id="testBtn" class="secondary" type="button">Test Connection</button>
+        </div>
+
+        <div id="status" class="status"></div>
+      </div>
+    </div>
+
+    <script src="options.js"></script>
+  </body>
+</html>
