@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "EZ Translator 翻译神器",
   "version": "1.0.0",
-  "description": "This extension enables users to translate and replace either the entire current webpage or selected text on the page into a target language, with the option to restore the original content in a single click. In addition, clicking the extension icon opens a standalone translation window where users can manually enter any text for translation. The extension supports any LLM API that is compatible with the OpenAI standard as its underlying translation engine, while also offering traditional Google Translate services.",
+  "description": "Translate webpages, selected text, and free-form input with Google Translate or OpenAI-compatible APIs.",
   "permissions": [
     "storage",
     "contextMenus",
@@ -26,11 +26,11 @@
     "default_title": "EZ Translator 翻译神器",
     "default_popup": "popup.html",
     "default_icon": {
-    "16": "icons/icon_2.png",
-    "32": "icons/icon_2.png",
-    "48": "icons/icon_2.png",
-    "128": "icons/icon_2.png"
-  }
+      "16": "icons/icon_2.png",
+      "32": "icons/icon_2.png",
+      "48": "icons/icon_2.png",
+      "128": "icons/icon_2.png"
+    }
   },
   "background": {
     "service_worker": "service_worker.js"
