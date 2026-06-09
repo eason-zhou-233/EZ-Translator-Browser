@@ -1,3 +1,12 @@
+<!-- ============================================================
+     文件：popup.html
+     功能：EZ Translator 浏览器扩展的弹出窗口界面
+     说明：
+       - 提供手动输入文本并翻译的交互界面
+       - 支持源语言自动检测，目标语言手动选择
+       - 翻译结果可一键复制到剪贴板
+       - 右上角齿轮图标可跳转到设置页面
+     ============================================================ -->
 <!doctype html>
 <html lang="zh-CN">
   <head>
@@ -8,9 +17,11 @@
   </head>
   <body class="popup-body">
     <div class="panel">
+      <!-- 顶栏：标题 + 设置齿轮按钮 -->
       <div class="header-row">
         <h1>自由翻译</h1>
         <button id="settingsIconBtn" title="设置">
+          <!-- 齿轮 SVG 图标 -->
           <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <circle cx="12" cy="12" r="3"/>
             <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
@@ -18,6 +29,7 @@
         </button>
       </div>
 
+      <!-- 语言选择标签行 -->
       <div class="lang-label-row" style="display:flex;gap:8px;align-items:center;margin-bottom:4px;">
         <div style="flex:1;">
           <label for="sourceLang" style="font-size:13px;">原语言类型</label>
@@ -27,37 +39,44 @@
         </div>
       </div>
 
+      <!-- 语言选择下拉框行 -->
       <div class="lang-row" style="--select-height:36px;display:flex;gap:8px;align-items:center;margin-bottom:8px;">
         <div style="flex:1;display:flex;flex-direction:column;">
           <select id="sourceLang" style="height:var(--select-height);padding:6px 8px;border-radius:6px;border:1px solid #ccc;background:white;min-width:120px;">
-            <!-- options filled by popup.js -->
+            <!-- 选项由 popup.js 动态填充 -->
           </select>
         </div>
 
         <div style="flex:1;display:flex;flex-direction:column;">
           <select id="targetLang" style="height:var(--select-height);padding:6px 8px;border-radius:6px;border:1px solid #ccc;background:white;min-width:120px;">
-            <!-- options filled by popup.js -->
+            <!-- 选项由 popup.js 动态填充 -->
           </select>
         </div>
       </div>
 
+      <!-- 待翻译文本输入区 -->
       <label style="margin-top:6px;">待翻译文本</label>
       <textarea id="inputText" placeholder="粘贴需要翻译的文本"></textarea>
 
+      <!-- 操作按钮行 -->
       <div class="row">
         <button id="translateBtn">翻译</button>
         <button id="copyBtn" type="button">复制结果</button>
       </div>
 
+      <!-- 翻译结果展示区（只读） -->
       <label>结果</label>
       <textarea id="outputText" readonly placeholder="翻译结果会显示在这里"></textarea>
 
+      <!-- 元信息栏：显示语言检测结果和翻译状态 -->
       <div class="meta">
         <span id="metaInfo">自动识别待翻译文本语言类型</span>
       </div>
 
     </div>
+    <!-- 语言检测模块（零依赖） -->
     <script src="lang_detect.js"></script>
+    <!-- 弹出窗口交互逻辑 -->
     <script src="popup.js"></script>
   </body>
 </html>

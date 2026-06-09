@@ -1,3 +1,14 @@
+/* ============================================================
+   文件：styles.css
+   功能：弹出窗口（popup）的样式表
+   说明：
+     - popup 面板固定宽度 360px
+     - 设置按钮悬停变色效果
+     - 按钮禁用状态样式
+     - 页面悬浮翻译按钮样式（底部固定定位）
+   ============================================================ */
+
+/* 全局基础样式 */
 body {
   font-family: Arial, "PingFang SC", "Microsoft YaHei", sans-serif;
   margin: 0;
@@ -6,25 +17,30 @@ body {
   color: #222;
 }
 
+/* popup 面板固定宽度 */
 .popup-body {
   width: 360px;
 }
 
+/* 设置页面最大宽度 */
 .options-body {
   max-width: 640px;
   margin: 0 auto;
 }
 
+/* 面板内边距 */
 .panel {
   padding: 16px;
   position: relative;
 }
 
+/* 标题样式 */
 h1 {
   font-size: 18px;
   margin: 0;
 }
 
+/* 顶栏：标题和设置按钮水平排列 */
 .header-row {
   display: flex;
   align-items: center;
@@ -32,6 +48,7 @@ h1 {
   margin: 0 0 12px;
 }
 
+/* 设置齿轮按钮 */
 #settingsIconBtn {
   display: flex;
   align-items: center;
@@ -47,17 +64,20 @@ h1 {
   transition: background 0.15s, color 0.15s;
 }
 
+/* 设置按钮悬停：浅灰背景 + 蓝色图标 */
 #settingsIconBtn:hover {
   background: #e8e8e8;
   color: #1f6feb;
 }
 
+/* 表单标签 */
 label {
   display: block;
   font-size: 13px;
   margin: 12px 0 6px;
 }
 
+/* 输入框、下拉框基础样式 */
 textarea,
 input,
 select {
@@ -70,11 +90,13 @@ select {
   background: white;
 }
 
+/* 文本域：最小高度，可垂直调整 */
 textarea {
   min-height: 120px;
   resize: vertical;
 }
 
+/* 按钮行：水平排列 */
 .row {
   display: flex;
   gap: 8px;
@@ -82,6 +104,7 @@ textarea {
   align-items: center;
 }
 
+/* 按钮基础样式 */
 button {
   border: none;
   border-radius: 8px;
@@ -92,30 +115,36 @@ button {
   font-size: 14px;
 }
 
+/* 按钮悬停加深 */
 button:hover {
   background: #0d47a1;
 }
 
+/* 按钮禁用状态：半透明 + 禁止点击 */
 button:disabled {
   opacity: 0.7;
   cursor: not-allowed;
 }
 
+/* 元信息栏：语言检测结果提示 */
 .meta {
   margin-top: 8px;
   font-size: 12px;
   color: #666;
 }
 
+/* 状态文字 */
 #status {
   font-size: 13px;
   color: #0a7a0a;
 }
 
+/* 设置面板 */
 .options-panel {
   padding-top: 24px;
 }
 
+/* 页面悬浮翻译按钮（content_script 中创建） */
 #translation-toggle-btn {
   position: fixed;
   bottom: 20px;
@@ -132,11 +161,13 @@ button:disabled {
   transition: all 0.2s ease;
 }
 
+/* 悬浮按钮悬停效果 */
 #translation-toggle-btn:hover {
   background: #0d47a1;
   box-shadow: 0 4px 12px rgba(0,0,0,0.2);
 }
 
+/* 悬浮按钮点击缩放反馈 */
 #translation-toggle-btn:active {
   transform: scale(0.98);
 }

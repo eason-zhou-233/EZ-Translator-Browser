@@ -1,3 +1,12 @@
+<!-- ============================================================
+     文件：options.html
+     功能：EZ Translator 翻译设置页面
+     说明：
+       - 支持选择翻译引擎：传统翻译服务API / 大模型API
+       - 大模型模式下可配置：API地址、模型名、目标语言、API Key
+       - 支持高级参数：Temperature、Top K、Top P、Max Tokens
+       - 支持保存设置和测试连接
+     ============================================================ -->
 <!doctype html>
 <html lang="zh-CN">
   <head>
@@ -12,6 +21,7 @@
         <h1>翻译设置</h1>
         <p class="desc">选择底层翻译引擎并配置对应参数。</p>
 
+        <!-- 翻译引擎选择 -->
         <div class="field-group">
           <label for="translationProvider">翻译引擎</label>
           <select id="translationProvider">
@@ -20,6 +30,7 @@
           </select>
         </div>
 
+        <!-- 传统翻译服务设置区域（选择 native 时显示） -->
         <div id="nativeSettingsGroup">
           <div class="field-group">
             <label for="translationService">翻译服务</label>
@@ -38,6 +49,7 @@
           </div>
         </div>
 
+        <!-- 大模型 API 设置区域（选择 llm 时显示） -->
         <div id="llmSettingsGroup">
           <div class="field-group">
             <label for="apiBaseUrl">API Base URL *</label>
@@ -72,6 +84,7 @@
             <input id="apiKey" type="text" placeholder="sk-xxxx" />
           </div>
 
+          <!-- 认证配置：两列布局 -->
           <div class="grid-2">
             <div class="field-group">
               <label for="apiKeyHeader">Authorization Header Name</label>
@@ -84,6 +97,7 @@
             </div>
           </div>
 
+          <!-- 模型高级参数：四列布局 -->
           <div class="grid-4">
             <div class="field-group compact">
               <label class="mini-label" for="temperature">Temperature</label>
@@ -135,11 +149,13 @@
           </div>
         </div>
 
+        <!-- 操作按钮区 -->
         <div class="actions">
           <button id="saveBtn">Save Settings</button>
           <button id="testBtn" class="secondary" type="button">Test Connection</button>
         </div>
 
+        <!-- 状态提示区 -->
         <div id="status" class="status"></div>
       </div>
     </div>

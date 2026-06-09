@@ -1,7 +1,18 @@
+/* ============================================================
+   文件：options.css
+   功能：翻译设置页面的样式表
+   说明：
+     - 响应式布局，支持桌面端和移动端
+     - 网格系统：grid-2（两列）和 grid-4（四列）
+     - 卡片式设计，圆角阴影
+   ============================================================ */
+
+/* 全局盒模型：border-box 简化尺寸计算 */
 * {
   box-sizing: border-box;
 }
 
+/* 页面基础样式：浅灰背景，深色文字 */
 body {
   margin: 0;
   padding: 24px;
@@ -10,15 +21,18 @@ body {
   color: #1f2937;
 }
 
+/* 设置页面容器：撑满视口高度 */
 .options-body {
   min-height: 100vh;
 }
 
+/* 内容居中容器 */
 .container {
   max-width: 960px;
   margin: 0 auto;
 }
 
+/* 卡片样式：白色背景，圆角，阴影 */
 .card {
   background: #fff;
   border-radius: 16px;
@@ -26,24 +40,29 @@ body {
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
 }
 
+/* 页面标题 */
 h1 {
   margin: 0 0 8px;
   font-size: 26px;
 }
 
+/* 描述文字 */
 .desc {
   margin: 0 0 24px;
   color: #6b7280;
 }
 
+/* 表单字段组 */
 .field-group {
   margin-bottom: 18px;
 }
 
+/* 紧凑型字段组（用于网格内字段） */
 .field-group.compact {
   margin-bottom: 0;
 }
 
+/* 表单标签 */
 label {
   display: block;
   margin-bottom: 8px;
@@ -52,6 +71,7 @@ label {
   color: #111827;
 }
 
+/* 迷你标签（用于网格内的小字段） */
 .mini-label {
   margin-bottom: 8px;
   font-size: 14px;
@@ -59,6 +79,7 @@ label {
   color: #111827;
 }
 
+/* 输入框、文本域、下拉选择框统一样式 */
 input,
 textarea,
 select {
@@ -71,40 +92,47 @@ select {
   color: #111827;
 }
 
+/* 占位符文字颜色 */
 input::placeholder,
 textarea::placeholder {
   color: #9ca3af;
   opacity: 1;
 }
 
+/* 文本域：可垂直调整大小，等宽字体 */
 textarea {
   resize: vertical;
   min-height: 120px;
   font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
 }
 
+/* 两列网格布局 */
 .grid-2 {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 16px;
 }
 
+/* 四列网格布局 */
 .grid-4 {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 12px;
 }
 
+/* 网格内的字段组取消底部间距 */
 .grid-4 .field-group {
   margin-bottom: 0;
 }
 
+/* 操作按钮区域 */
 .actions {
   display: flex;
   gap: 12px;
   margin-top: 24px;
 }
 
+/* 按钮基础样式 */
 button {
   border: none;
   border-radius: 10px;
@@ -116,34 +144,41 @@ button {
   color: white;
 }
 
+/* 次要按钮（深灰色背景） */
 button.secondary {
   background: #374151;
 }
 
+/* 按钮悬停效果 */
 button:hover {
   filter: brightness(0.95);
 }
 
+/* 状态提示文字区域 */
 .status {
   margin-top: 18px;
   font-size: 14px;
   min-height: 20px;
 }
 
+/* 成功状态：绿色 */
 .status.success {
   color: #059669;
 }
 
+/* 错误状态：红色 */
 .status.error {
   color: #dc2626;
 }
 
+/* 响应式布局：宽度 <= 820px 时，四列变两列 */
 @media (max-width: 820px) {
   .grid-4 {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 
+/* 响应式布局：宽度 <= 560px 时，所有网格变为单列，按钮竖向排列 */
 @media (max-width: 560px) {
   .grid-2,
   .grid-4 {

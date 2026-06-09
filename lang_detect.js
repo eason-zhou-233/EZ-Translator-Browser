@@ -6,6 +6,7 @@
 (function () {
   "use strict";
 
+  // 支持的语言信息表：包含显示标签和原生名称
   const LANG_INFO = {
     Chinese:  { label: "中文",      native: "中文" },
     English:  { label: "English",  native: "English" },
@@ -73,20 +74,27 @@
     WORD_SETS[lang] = new Set(words);
   }
 
-  // ---- 字符范围判断 ----
+  // ---- 字符范围判断：基于 Unicode 码点判断字符所属的书写系统 ----
   function inRange(ch, start, end) {
     const cp = ch.codePointAt(0);
     return cp >= start && cp <= end;
   }
 
+  // CJK 统一表意文字（含扩展A区和兼容汉字）
   const isCJK      = (ch) => inRange(ch, 0x4E00, 0x9FFF) || inRange(ch, 0x3400, 0x4DBF) || inRange(ch, 0xF900, 0xFAFF);
+  // 日文平假名
   const isHiragana = (ch) => inRange(ch, 0x3040, 0x309F);
+  // 日文片假名
   const isKatakana = (ch) => inRange(ch, 0x30A0, 0x30FF);
+  // 韩文谚文（含谚文字母和兼容字母）
   const isHangul   = (ch) => inRange(ch, 0xAC00, 0xD7AF) || inRange(ch, 0x1100, 0x11FF) || inRange(ch, 0x3130, 0x318F);
+  // 西里尔字母（俄文等）
   const isCyrillic = (ch) => inRange(ch, 0x0400, 0x04FF) || inRange(ch, 0x0500, 0x052F);
+  // 拉丁字母（英文、法文、德文等）
   const isLatin    = (ch) => inRange(ch, 0x0041, 0x005A) || inRange(ch, 0x0061, 0x007A);
 
-  // ---- 脚本字符计数 ----
+  // ---- 统计文本中各书写系统字符数量 ----
+  // 忽略空白字符，分别统计 CJK、假名、谚文、西里尔、拉丁字符数
   function countScripts(text) {
     let cjk = 0, hiragana = 0, katakana = 0, hangul = 0, cyrillic = 0, latin = 0, total = 0;
     for (const ch of text) {
@@ -102,12 +110,14 @@
     return { cjk, hiragana, katakana, hangul, cyrillic, latin, total };
   }
 
-  // ---- 拉丁语系细分 ----
+  // ---- 拉丁语系细分：通过常见词匹配和特殊字符区分英语/法语/德语 ----
+  // 法语特殊字符（éèêëàâçîïôûùüœæ）和德语独有字符 ß 会作为加分项
+  // 取得分最高的语言作为最终结果
   function detectLatinLanguage(text) {
     const words = text.toLowerCase().match(/[a-zà-ÿœæ]+/g) || [];
     if (words.length === 0) return "English";
 
-    // 基础词匹配计分
+    // 基础词匹配计分：统计每种语言的常见词命中次数
     const scores = { English: 0, French: 0, German: 0 };
     for (const w of words) {
       for (const lang of ["French", "German", "English"]) {
@@ -135,14 +145,16 @@
     return best;
   }
 
-  // ---- 主入口：检测语言 ----
+  // ---- 主入口：检测文本语言 ----
+  // 检测优先级：日文（有假名即判） > 韩文（谚文>10%） > 中文（CJK>10%） > 俄文（西里尔>10%） > 拉丁语系（>30%时细分英法德）
+  // 返回语言代码字符串，无法判断时返回 null
   function detectLanguage(text) {
     if (!text || !text.trim()) return null;
 
     const trimmed = text.trim();
     const counts = countScripts(trimmed);
 
-    // 日文：有假名即可判定
+    // 日文：有假名即可判定（平假名或片假名）
     if (counts.hiragana > 0 || counts.katakana > 0) {
       return "Japanese";
     }
@@ -162,7 +174,7 @@
       return "Russian";
     }
 
-    // 拉丁字母：用常见词细分
+    // 拉丁字母：用常见词细分英法德
     if (counts.latin > counts.total * 0.3) {
       return detectLatinLanguage(trimmed);
     }
@@ -179,7 +191,9 @@
     return LANG_INFO[lang]?.label || lang;
   }
 
-  // ---- 导出 ----
+  // ---- 导出模块 ----
+  // 同时挂载到 window（普通页面/content script）和 self（Service Worker）
+  // 确保在各种浏览器扩展上下文中均可使用
   const module = { detect: detectLanguage, getNativeName, getLabel };
 
   if (typeof window !== "undefined") window.LangDetect = module;

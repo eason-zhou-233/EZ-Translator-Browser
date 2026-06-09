@@ -1,27 +1,42 @@
+// ============================================================
+// 文件：options.js
+// 功能：翻译设置页面的交互逻辑
+// 说明：
+//   - 加载/保存用户设置到 chrome.storage.sync
+//   - 根据翻译引擎选择动态显示/隐藏对应的设置区域
+//   - Tab 键自动填充默认值功能
+//   - 表单验证：数值范围、JSON 格式校验
+//   - 测试连接：通过 chrome.runtime.sendMessage 测试 API 连通性
+// ============================================================
+
+// 默认设置：首次使用或未配置时的回退值
 const DEFAULT_SETTINGS = {
-  translationProvider: "native",
-  translationService: "google",
+  translationProvider: "native",       // 翻译引擎：native=传统API, llm=大模型API
+  translationService: "google",        // 传统翻译服务商
 
-  googleTranslateBaseUrl: "https://translate.googleapis.com",
+  googleTranslateBaseUrl: "https://translate.googleapis.com",  // Google 翻译 API 地址
 
-  apiBaseUrl: "http://localhost:1234",
-  chatPath: "/v1/chat/completions",
-  modelName: "hy-mt2-1.8b",
-  apiKey: "",
-  apiKeyHeader: "Authorization",
-  apiKeyPrefix: "Bearer",
-  temperature: 0.7,
-  topK: 20,
-  topP: 0.6,
-  maxTokens: 4096,
-  timeoutMs: 120000,
-  extraHeaders: "{}",
-  defaultTargetLanguage: "Chinese",
+  apiBaseUrl: "http://localhost:1234",          // 大模型 API 基础地址
+  chatPath: "/v1/chat/completions",             // Chat Completions 路径
+  modelName: "hy-mt2-1.8b",                     // 模型名称
+  apiKey: "",                                   // API 密钥
+  apiKeyHeader: "Authorization",                // 认证头名称
+  apiKeyPrefix: "Bearer",                       // 认证前缀
+  temperature: 0.7,                             // 采样温度（0-1）
+  topK: 20,                                     // Top-K 采样
+  topP: 0.6,                                    // 核采样概率
+  maxTokens: 4096,                              // 最大输出 token 数
+  timeoutMs: 120000,                            // 请求超时（毫秒）
+  extraHeaders: "{}",                           // 额外请求头（JSON 格式）
+  defaultTargetLanguage: "Chinese",             // 默认目标语言
 };
 
+// API Key 输入框的占位符（用于隐藏实际密钥）
 const API_KEY_PLACEHOLDER = "sk-xxxx";
+// chrome.storage 中的标记键，用于判断用户是否已完成首次保存
 const SETTINGS_UI_INITIALIZED_KEY = "__settingsUiInitialized";
 
+// DOM 元素引用集合：统一管理所有表单元素，避免重复查询
 const els = {
   translationProvider: document.getElementById("translationProvider"),
   translationService: document.getElementById("translationService"),
@@ -48,16 +63,21 @@ const els = {
   status: document.getElementById("status"),
 };
 
+// 设置状态提示文字（成功/错误）
 function setStatus(text, isError = false) {
   els.status.textContent = text;
   els.status.className = isError ? "status error" : "status success";
 }
 
+// 规范化文本值：将 null/undefined 转为空字符串，其余转字符串并去首尾空格
 function normalizeTextValue(value) {
   if (value === undefined || value === null) return "";
   return String(value).trim();
 }
 
+// 绑定 Tab 键自动填充默认值行为
+// 当输入框为空时按 Tab，自动填入默认值并触发 input 事件
+// 对于不支持 setSelectionRange 的输入类型（如 number），静默忽略
 function bindDefaultFillBehavior(inputEl, defaultValue) {
   if (!inputEl) return;
 
@@ -69,7 +89,7 @@ function bindDefaultFillBehavior(inputEl, defaultValue) {
       if (event.key !== "Tab") return;
 
       const currentValue = normalizeTextValue(inputEl.value);
-      if (currentValue) return;
+      if (currentValue) return;  // 已有值时不做替换
 
       event.preventDefault();
       event.stopImmediatePropagation();
@@ -77,6 +97,7 @@ function bindDefaultFillBehavior(inputEl, defaultValue) {
       inputEl.value = String(defaultValue);
       inputEl.dispatchEvent(new Event("input", { bubbles: true }));
 
+      // 将光标移到末尾
       const len = inputEl.value.length;
       try {
         inputEl.setSelectionRange(len, len);
@@ -84,7 +105,7 @@ function bindDefaultFillBehavior(inputEl, defaultValue) {
         // 某些 input 类型不支持 setSelectionRange，忽略
       }
     },
-    true
+    true  // 使用捕获阶段，确保优先处理
   );
 }
 
