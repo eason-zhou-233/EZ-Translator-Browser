@@ -36,7 +36,7 @@ const DEFAULT_SETTINGS = {
 };
 
 // 缓存配置
-const CACHE_MAX_ENTRIES = 500;                           // 最大缓存条目数（超出后按 LRU 淘汰）
+const CACHE_MAX_ENTRIES = 5000;                           // 最大缓存条目数（超出后按 LRU 淘汰）
 const CACHE_TTL_MS = 10 * 24 * 60 * 60 * 1000;           // 缓存有效期：10 天
 const CACHE_MAINTENANCE_THROTTLE_MS = 10 * 60 * 1000;     // 缓存维护节流：10 分钟
 
