@@ -6,8 +6,7 @@
   "permissions": [
     "storage",
     "contextMenus",
-    "activeTab",
-    "scripting"
+    "activeTab"
   ],
   "host_permissions": [
     "http://localhost/*",
