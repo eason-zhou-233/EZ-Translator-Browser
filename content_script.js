@@ -7,6 +7,7 @@
 //   - 通过 WeakMap 记录每个文本节点的翻译历史，支持撤销恢复
 //   - 并发控制：最多同时发起 MAX_CONCURRENT_TRANSLATIONS 个翻译请求
 //   - 智能跳过：自动跳过纯中文、纯标点、邮箱、URL、日期、纯数字等文本
+//   - 子页面翻译：支持检测父页面的子页面标签，批量翻译并持久化
 // ============================================================
 
 // 翻译目标语言（固定为中文，用于网页内翻译）
@@ -16,6 +17,15 @@ const MAX_CONCURRENT_TRANSLATIONS = 4;
 
 // 翻译操作进行中标志，防止重复触发翻译
 let isTranslatingOperation = false;
+
+// 翻译持久化存储键前缀
+const TRANSLATION_STORAGE_PREFIX = "ez_trans_persist_";
+
+// 当前页面是否已被翻译过的标记
+let isCurrentPageTranslated = false;
+
+// 当前页面所属的父页面 URL（用于子页面识别）
+let parentPageUrl = null;
 
 /**
  * 翻译历史记录映射表
@@ -28,6 +38,226 @@ let isTranslatingOperation = false;
  * }
  */
 const translationHistoryMap = new WeakMap();
+
+// ----------------------------------------------------------
+// 获取当前页面的标准化 URL（去除 hash 和 trailing slash）
+// ----------------------------------------------------------
+function getNormalizedPageUrl() {
+  const url = new URL(window.location.href);
+  url.hash = "";
+  let pathname = url.pathname.replace(/\/$/, "");
+  url.pathname = pathname;
+  return url.href;
+}
+
+// ----------------------------------------------------------
+// 获取翻译持久化的存储键
+// ----------------------------------------------------------
+function getTranslationStorageKey(url) {
+  return `${TRANSLATION_STORAGE_PREFIX}${url}`;
+}
+
+// ----------------------------------------------------------
+// 保存翻译状态到 chrome.storage.local
+// 存储内容：{ translated: boolean, timestamp, url, parentUrl }
+// translated=true 表示页面已翻译，translated=false 表示尚未翻译但属于已翻译父页面的子页面
+// ----------------------------------------------------------
+async function saveTranslationState(url, parentUrl, translated = true) {
+  const key = getTranslationStorageKey(url);
+  await chrome.storage.local.set({
+    [key]: {
+      translated: translated,
+      timestamp: Date.now(),
+      url: url,
+      parentUrl: parentUrl || null,
+    },
+  });
+}
+
+// ----------------------------------------------------------
+// 检查某个 URL 是否已被翻译
+// ----------------------------------------------------------
+async function isUrlTranslated(url) {
+  const key = getTranslationStorageKey(url);
+  const result = await chrome.storage.local.get(key);
+  return !!(result[key]?.translated);
+}
+
+// ----------------------------------------------------------
+// 从存储中删除翻译状态
+// ----------------------------------------------------------
+async function removeTranslationState(url) {
+  const key = getTranslationStorageKey(url);
+  await chrome.storage.local.remove(key);
+}
+
+// ----------------------------------------------------------
+// 清除属于某个父页面的所有子页面翻译状态
+// ----------------------------------------------------------
+async function clearChildTranslationStates(parentUrl) {
+  const allItems = await chrome.storage.local.get(null);
+  const keysToRemove = [];
+
+  for (const [key, value] of Object.entries(allItems)) {
+    if (key.startsWith(TRANSLATION_STORAGE_PREFIX)) {
+      if (value?.parentUrl === parentUrl || value?.url === parentUrl) {
+        keysToRemove.push(key);
+      }
+    }
+  }
+
+  if (keysToRemove.length > 0) {
+    await chrome.storage.local.remove(keysToRemove);
+  }
+}
+
+// ----------------------------------------------------------
+// 检测当前页面中所有子页面标签链接
+// 子页面定义：<a> 标签的 href 以当前页面 URL 为前缀
+// 即 href 是 currentUrl + 额外路径后缀
+// 返回去重后的子页面 URL 数组
+// ----------------------------------------------------------
+function detectSubPageUrls() {
+  const currentUrl = getNormalizedPageUrl();
+  const currentUrlObj = new URL(currentUrl);
+  const baseOrigin = currentUrlObj.origin;
+  const basePath = currentUrlObj.pathname;
+
+  const subPageUrls = new Set();
+  const allAnchors = document.querySelectorAll("a[href]");
+
+  for (const anchor of allAnchors) {
+    try {
+      const href = anchor.getAttribute("href");
+      if (!href || href.startsWith("#") || href.startsWith("javascript:")) continue;
+      if (href.startsWith("mailto:") || href.startsWith("tel:")) continue;
+
+      // 解析为绝对 URL
+      const absoluteUrl = new URL(href, window.location.href);
+      absoluteUrl.hash = "";
+
+      // 必须是同源的
+      if (absoluteUrl.origin !== baseOrigin) continue;
+
+      const absolutePath = absoluteUrl.pathname;
+      const fullUrl = absoluteUrl.href;
+
+      // 跳过当前页面自身
+      if (fullUrl === currentUrl) continue;
+
+      // 判断是否为子页面：路径以当前页面路径为前缀
+      // 例如：当前页 /docs/guide，子页 /docs/guide/install
+      // 注意：/docs/guide 不是 /docs 的子页面（没有共同前缀关系需要更多判断）
+      const normalizedBasePath = basePath.replace(/\/$/, "");
+      const normalizedAbsPath = absolutePath.replace(/\/$/, "");
+
+      // 子页面判断：绝对路径以当前路径 + "/" 开头
+      if (
+        normalizedAbsPath !== normalizedBasePath &&
+        normalizedAbsPath.startsWith(normalizedBasePath + "/")
+      ) {
+        subPageUrls.add(fullUrl);
+      }
+    } catch {
+      // URL 解析失败，跳过
+    }
+  }
+
+  return [...subPageUrls];
+}
+
+// ----------------------------------------------------------
+// 页面加载时自动恢复翻译
+// 检查当前 URL 是否在翻译状态存储中，如在则自动触发翻译
+// 三种触发条件（满足任一即翻译）：
+//   1. 当前 URL 被精确记录（translated=true 表示已翻译过，translated=false 表示预记录的子页面）
+//   2. 当前 URL 的各级父路径中有在 24 小时内已翻译的页面
+// ----------------------------------------------------------
+async function autoRestoreTranslationIfNeeded() {
+  // 防止在翻译操作进行中重复触发
+  if (isTranslatingOperation) {
+    console.log("[EZ Translator] 跳过自动恢复：翻译操作进行中");
+    return;
+  }
+
+  const currentUrl = getNormalizedPageUrl();
+  console.log("[EZ Translator] 检查是否需要自动翻译:", currentUrl);
+
+  const allItems = await chrome.storage.local.get(null);
+  let shouldRestore = false;
+  let foundParentUrl = null;
+
+  // 方法1：精确匹配当前 URL
+  const currentKey = getTranslationStorageKey(currentUrl);
+  const currentState = allItems[currentKey];
+
+  if (currentState) {
+    console.log("[EZ Translator] 找到精确匹配记录:", {
+      translated: currentState.translated,
+      timestamp: currentState.timestamp,
+      parentUrl: currentState.parentUrl,
+    });
+
+    // 无论 translated 是 true 还是 false，都触发翻译
+    // translated=true：页面曾被翻译过，DOM 已重置，需要重新翻译
+    // translated=false：预记录的子页面，首次访问需要翻译
+    shouldRestore = true;
+    foundParentUrl = currentState.parentUrl || null;
+
+    // 额外检查：如果 translated=true 且是最近 10 秒内翻译的（同一次页面加载），跳过
+    // 避免翻译完成后立即再次触发
+    if (currentState.translated === true && isCurrentPageTranslated) {
+      const secondsSinceTranslation = (Date.now() - currentState.timestamp) / 1000;
+      if (secondsSinceTranslation < 10) {
+        console.log("[EZ Translator] 跳过自动恢复：近期已翻译过（同一页面加载）");
+        return;
+      }
+    }
+  }
+
+  // 方法2：通过父路径查找（适用于未被精确记录的子页面）
+  if (!shouldRestore) {
+    const urlObj = new URL(currentUrl);
+    const pathParts = urlObj.pathname.replace(/\/$/, "").split("/").filter(Boolean);
+
+    console.log("[EZ Translator] 未精确匹配，尝试父路径查找，pathParts:", pathParts);
+
+    for (let i = pathParts.length - 1; i >= 0; i--) {
+      const parentPath = i === 0 ? "/" : "/" + pathParts.slice(0, i).join("/");
+      const parentUrl = urlObj.origin + parentPath;
+      const parentKey = getTranslationStorageKey(parentUrl);
+      const parentState = allItems[parentKey];
+
+      if (parentState?.translated === true) {
+        const hoursSinceTranslation = (Date.now() - parentState.timestamp) / (1000 * 60 * 60);
+        console.log("[EZ Translator] 找到已翻译父页面:", parentUrl, "距今:", hoursSinceTranslation.toFixed(1), "小时");
+        if (hoursSinceTranslation < 24) {
+          shouldRestore = true;
+          foundParentUrl = parentUrl;
+          break;
+        }
+      }
+    }
+  }
+
+  if (!shouldRestore) {
+    console.log("[EZ Translator] 无需自动翻译:", currentUrl);
+    return;
+  }
+
+  console.log("[EZ Translator] 开始自动翻译:", currentUrl, "父页面:", foundParentUrl);
+  parentPageUrl = foundParentUrl;
+
+  try {
+    await translateCurrentPageInPlace();
+    // 翻译完成后更新状态为已翻译
+    await saveTranslationState(currentUrl, foundParentUrl, true);
+    isCurrentPageTranslated = true;
+    console.log("[EZ Translator] 自动翻译完成:", currentUrl);
+  } catch (err) {
+    console.warn("[EZ Translator] 自动翻译失败:", err);
+  }
+}
 
 // ----------------------------------------------------------
 // 消息监听器：接收来自 service_worker 的翻译/恢复指令
@@ -77,11 +307,22 @@ chrome.runtime?.onMessage?.addListener((message, sender, sendResponse) => {
     return true;
   }
 
-  // 处理整页翻译请求：翻译页面中所有可见文本
+  // 处理整页翻译请求：翻译页面中所有可见文本，并保存翻译状态以便子页面自动恢复
   if (message.type === "TRANSLATE_PAGE") {
     (async () => {
       try {
+        const currentUrl = getNormalizedPageUrl();
         const changedSegments = await translateCurrentPageInPlace();
+
+        // 翻译完成后，保存当前页面翻译状态
+        await saveTranslationState(currentUrl, null, true);
+        // 检测子页面并预记录它们的 URL（标记为已翻译父页面的子页面，但尚未翻译）
+        const subUrls = detectSubPageUrls();
+        for (const subUrl of subUrls) {
+          await saveTranslationState(subUrl, currentUrl, false);
+        }
+        console.log("[EZ Translator] 翻译完成，已记录", subUrls.length, "个待翻译子页面");
+
         sendResponse({
           ok: true,
           changedSegments,
@@ -97,11 +338,17 @@ chrome.runtime?.onMessage?.addListener((message, sender, sendResponse) => {
     return true;
   }
 
-  // 处理整页恢复请求：将页面所有翻译后的文本还原
+  // 处理整页恢复请求：将页面所有翻译后的文本还原，并清除关联的翻译状态
   if (message.type === "RESTORE_PAGE") {
     (async () => {
       try {
+        const currentUrl = getNormalizedPageUrl();
         const restored = await restoreCurrentPage();
+        // 清除当前页面及所有子页面的翻译状态
+        await clearChildTranslationStates(currentUrl);
+        isCurrentPageTranslated = false;
+        parentPageUrl = null;
+        console.log("[EZ Translator] 恢复完成，已清除翻译状态");
         sendResponse({
           ok: true,
           restored,
@@ -895,3 +1142,105 @@ function buildDomPath(el) {
 
   return parts.join(" > ");
 }
+
+// ----------------------------------------------------------
+// SPA 路由变化检测
+// 许多现代网站使用 History API 或 hash 实现客户端路由
+// 当 URL 变化但页面不刷新时，需要重新检查是否需要翻译
+// 使用多重策略确保捕获所有导航方式：
+//   1. popstate / hashchange 事件
+//   2. 拦截 history.pushState / replaceState
+//   3. 定时轮询 URL 变化（兜底方案，捕获 location 直接赋值等）
+// ----------------------------------------------------------
+let lastCheckedUrl = getNormalizedPageUrl();
+
+// 防抖：避免短时间内多次触发翻译检查
+let spaRouteCheckTimer = null;
+const SPA_ROUTE_CHECK_DELAY = 800;
+
+// URL 轮询间隔（兜底方案）
+const URL_POLL_INTERVAL = 1000;
+let urlPollIntervalId = null;
+
+/**
+ * SPA 路由变化时的处理：检查 URL 是否变化，若是则尝试恢复翻译
+ */
+function handleSpaRouteChange() {
+  const currentUrl = getNormalizedPageUrl();
+  if (currentUrl === lastCheckedUrl) return;
+
+  console.log("[EZ Translator] URL 变化检测:", lastCheckedUrl, "→", currentUrl);
+
+  // URL 已变化，重置状态
+  lastCheckedUrl = currentUrl;
+  isCurrentPageTranslated = false;
+  parentPageUrl = null;
+
+  // 清除之前的定时器，实现防抖
+  if (spaRouteCheckTimer) clearTimeout(spaRouteCheckTimer);
+
+  spaRouteCheckTimer = setTimeout(() => {
+    console.log("[EZ Translator] SPA 路由变化，触发自动翻译:", currentUrl);
+    autoRestoreTranslationIfNeeded().catch((err) => {
+      console.warn("[EZ Translator] SPA 路由自动翻译失败:", err);
+    });
+  }, SPA_ROUTE_CHECK_DELAY);
+}
+
+// ----------------------------------------------------------
+// 页面加载完成后自动检测并恢复翻译状态
+// 同时设置 SPA 路由变化监听
+// ----------------------------------------------------------
+(function initAutoRestore() {
+  // 监听 popstate 事件（浏览器前进/后退按钮）
+  window.addEventListener("popstate", () => {
+    console.log("[EZ Translator] popstate 事件触发");
+    handleSpaRouteChange();
+  });
+
+  // 监听 hashchange 事件（hash 路由变化）
+  window.addEventListener("hashchange", () => {
+    console.log("[EZ Translator] hashchange 事件触发");
+    handleSpaRouteChange();
+  });
+
+  // 拦截 history.pushState 和 history.replaceState（JS 触发的路由变化）
+  const originalPushState = history.pushState;
+  const originalReplaceState = history.replaceState;
+
+  history.pushState = function (...args) {
+    const result = originalPushState.apply(this, args);
+    console.log("[EZ Translator] history.pushState 拦截:", args);
+    handleSpaRouteChange();
+    return result;
+  };
+
+  history.replaceState = function (...args) {
+    const result = originalReplaceState.apply(this, args);
+    console.log("[EZ Translator] history.replaceState 拦截:", args);
+    handleSpaRouteChange();
+    return result;
+  };
+
+  // 定时轮询 URL 变化（兜底：捕获 location.href 直接赋值等绕过 History API 的导航）
+  urlPollIntervalId = setInterval(() => {
+    handleSpaRouteChange();
+  }, URL_POLL_INTERVAL);
+
+  // 初始加载时执行一次自动恢复
+  function doInitialCheck() {
+    lastCheckedUrl = getNormalizedPageUrl();
+    console.log("[EZ Translator] 初始加载检查:", lastCheckedUrl);
+    autoRestoreTranslationIfNeeded().catch((err) => {
+      console.warn("[EZ Translator] 自动恢复初始化失败:", err);
+    });
+  }
+
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", () => {
+      setTimeout(doInitialCheck, 800);
+    });
+  } else {
+    setTimeout(doInitialCheck, 800);
+  }
+})();
